@@ -261,3 +261,10 @@ pre{
   background: rgba(255,255,255,.06);
 }
 .qrbox img{width:100%; height:auto; display:block; border-radius: 10px;}
+
+details.card > summary {
+  list-style: none;
+  cursor: pointer;
+}
+details.card > summary::-webkit-details-marker { display:none; }
+details[open] .card-h { border-bottom: 1px solid var(--border); }
