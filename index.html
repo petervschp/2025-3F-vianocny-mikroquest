@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="sk">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>MikroQuest Krtko – PWA (Brython)</title>
+
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#111827">
+
+  <link rel="stylesheet" href="style.css" />
+
+  <!-- Brython (CDN). Tip: Ak chceš 100% offline first-run, stiahni tieto súbory lokálne. -->
+  <script src="https://cdn.jsdelivr.net/npm/brython@3.10.5/brython.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/brython@3.10.5/brython_stdlib.js"></script>
+</head>
+
+<body onload="brython()">
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo" aria-hidden="true">🐾</div>
+      <div class="brand-text">
+        <div class="title">MikroQuest: Krtko</div>
+        <div class="subtitle">Aktuálna + predchádzajúca výzva • po termíne celý archív • PWA offline</div>
+      </div>
+    </div>
+    <div class="top-actions">
+      <button id="btn_install" class="btn">Nahoď do zariadenia</button>
+      <button id="btn_qr" class="btn ghost" style="display:none;">Zobraziť QR</button>
+      <button id="btn_reset" class="btn danger">Reset progresu</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="panel">
+      <div id="banner" class="banner" role="status" aria-live="polite"></div>
+
+      <div class="card">
+        <div class="card-h">Dnes dostupné</div>
+        <div id="active_area" class="card-b"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-h">Archív</div>
+        <div class="card-b">
+          <div id="archive_area" class="archive"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="card">
+        <div class="card-h">Krtko demo (základ)</div>
+        <div class="card-b">
+          <div class="gamebar">
+            <div>Skóre: <b id="score">0</b></div>
+            <div>Čas: <b id="time">—</b></div>
+            <button id="btn_start" class="btn">Štart</button>
+            <button id="btn_stop" class="btn ghost">Stop</button>
+          </div>
+
+          <div id="grid" class="grid" aria-label="Mriežka krtka"></div>
+
+          <div class="muted">
+            Toto je <b>baseline</b>. Mikroquesty (vľavo) ukážu, ako ho postupne vylepšiť.
+            Ukážkové riešenia sa odomknú po vyriešení mini Python úloh.
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-h">Ako to použiť na 1×45 (opakovanie)</div>
+        <div class="card-b">
+          <ol class="howto">
+            <li>Žiaci otvoria stránku a vyriešia mini úlohy pre aktuálnu výzvu (3–8 min).</li>
+            <li>Po odomknutí si prečítajú ukážkové riešenie a vysvetlia, <i>prečo to funguje</i>.</li>
+            <li>Bonus: prenesú zmenu do vlastného projektu “Krtko-masaker”.</li>
+          </ol>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="muted">© MikroQuest • Brython • GitHub Pages • Offline PWA</div>
+  </footer>
+
+  <!-- QR modal -->
+  <div id="qr_modal" class="modal" style="display:none;">
+    <div class="modal-backdrop" id="qr_close" aria-hidden="true"></div>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-label="QR kód na zdieľanie">
+      <div class="modal-h">
+        <div>
+          <div class="modal-title">QR kód na originál webu</div>
+          <div class="modal-sub" id="qr_url"></div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn ghost" id="qr_copy">Kopírovať link</button>
+          <button class="btn ghost" id="qr_close2">Zavrieť</button>
+        </div>
+      </div>
+      <div class="modal-b">
+        <div class="qrgrid">
+          <div class="qrbox">
+            <img id="qr_img" alt="QR kód" />
+          </div>
+          <div class="muted">
+            QR sa generuje cez verejnú službu (online). Ak si offline, skopíruj link.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Install help modal -->
+  <div id="install_modal" class="modal" style="display:none;">
+    <div class="modal-backdrop" id="inst_close" aria-hidden="true"></div>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-label="Ako nainštalovať aplikáciu">
+      <div class="modal-h">
+        <div>
+          <div class="modal-title">Ako “nahodiť” do zariadenia</div>
+          <div class="modal-sub">Ak sa neobjaví systémové okno, použi manuálnu inštaláciu.</div>
+        </div>
+        <button class="btn ghost" id="inst_close2">Zavrieť</button>
+      </div>
+      <div class="modal-b">
+        <ul class="howto">
+          <li><b>Android (Chrome/Edge):</b> menu ⋮ → <i>Install app</i> / <i>Pridať na plochu</i></li>
+          <li><b>iPhone/iPad (Safari):</b> Share → <i>Add to Home Screen</i></li>
+          <li><b>Desktop (Chrome/Edge):</b> ikona inštalácie v adresnom riadku alebo menu</li>
+        </ul>
+        <div class="muted">Po inštalácii sa v hlavičke zobrazí tlačidlo <b>Zobraziť QR</b> na zdieľanie originálnej URL.</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- PWA: service worker ---
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js"));
+    }
+
+    // --- Install + QR logic ---
+    let deferredPrompt = null;
+
+    const btnInstall = document.getElementById("btn_install");
+    const btnQr = document.getElementById("btn_qr");
+
+    const qrModal = document.getElementById("qr_modal");
+    const qrCloseA = document.getElementById("qr_close");
+    const qrCloseB = document.getElementById("qr_close2");
+    const qrCopy = document.getElementById("qr_copy");
+    const qrUrlEl = document.getElementById("qr_url");
+    const qrImg = document.getElementById("qr_img");
+
+    const instModal = document.getElementById("install_modal");
+    const instCloseA = document.getElementById("inst_close");
+    const instCloseB = document.getElementById("inst_close2");
+
+    const isStandalone = () =>
+      (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) ||
+      (window.navigator && window.navigator.standalone === true);
+
+    const originUrl = () => {
+      const u = new URL(window.location.href);
+      if (!u.pathname.endsWith("/")) {
+        u.pathname = u.pathname.substring(0, u.pathname.lastIndexOf("/") + 1);
+      }
+      u.search = "";
+      u.hash = "";
+      return u.toString();
+    };
+
+    function updateHeaderButtons() {
+      const installed = isStandalone() || localStorage.getItem("mqk_installed") === "1";
+      if (installed) {
+        btnQr.style.display = "inline-flex";
+        btnInstall.style.display = "none";
+      } else {
+        btnQr.style.display = "none";
+        btnInstall.style.display = "inline-flex";
+      }
+    }
+
+    window.addEventListener("beforeinstallprompt", (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      updateHeaderButtons();
+    });
+
+    window.addEventListener("appinstalled", () => {
+      localStorage.setItem("mqk_installed", "1");
+      deferredPrompt = null;
+      updateHeaderButtons();
+    });
+
+    function openInstallHelp() {
+      instModal.style.display = "block";
+    }
+    function closeInstallHelp() {
+      instModal.style.display = "none";
+    }
+    instCloseA.addEventListener("click", closeInstallHelp);
+    instCloseB.addEventListener("click", closeInstallHelp);
+
+    btnInstall.addEventListener("click", async () => {
+      if (!deferredPrompt) {
+        openInstallHelp();
+        return;
+      }
+      deferredPrompt.prompt();
+      await deferredPrompt.userChoice;
+      deferredPrompt = null;
+      setTimeout(updateHeaderButtons, 300);
+    });
+
+    function openQR() {
+      const url = originUrl();
+      qrUrlEl.textContent = url;
+
+      const qrApi = "https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=" + encodeURIComponent(url);
+      qrImg.src = qrApi;
+
+      qrModal.style.display = "block";
+    }
+    function closeQR() {
+      qrModal.style.display = "none";
+    }
+
+    btnQr.addEventListener("click", openQR);
+    qrCloseA.addEventListener("click", closeQR);
+    qrCloseB.addEventListener("click", closeQR);
+
+    qrCopy.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(qrUrlEl.textContent);
+        qrCopy.textContent = "Skopírované ✔";
+        setTimeout(() => (qrCopy.textContent = "Kopírovať link"), 1200);
+      } catch (e) {
+        alert("Nepodarilo sa skopírovať. Skús označiť a skopírovať link ručne.");
+      }
+    });
+
+    updateHeaderButtons();
+  </script>
+
+  <script type="text/python" src="app.py"></script>
+</body>
+</html>
