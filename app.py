@@ -180,28 +180,41 @@ def active_index(today: str) -> int:
 # -----------------------------
 LS_KEY = "mqk_unlocked_v1"
 
+from browser import local_storage
+
+LS_KEY = "mqk_unlocked_v1"
+
 def load_unlocked():
-    raw = local_storage.get(LS_KEY)   # namiesto getItem
+    try:
+        raw = local_storage[LS_KEY]   # ✅ takto
+    except KeyError:
+        return set()
+
     if not raw:
         return set()
-    try:
-        parts = [p for p in raw.split(",") if p.strip() != ""]
-        return set(int(p) for p in parts)
-    except Exception:
-        return set()
 
+    parts = [p for p in raw.split(",") if p.strip()]
+    out = set()
+    for p in parts:
+        try:
+            out.add(int(p))
+        except ValueError:
+            pass
+    return out
 
 def save_unlocked(s: set):
-    local_storage[LS_KEY] = ",".join(str(i) for i in sorted(list(s)))
-
-UNLOCKED = load_unlocked()
+    local_storage[LS_KEY] = ",".join(str(i) for i in sorted(s))  # ✅ takto
 
 def reset_progress(ev=None):
     global UNLOCKED
     UNLOCKED = set()
-    if LS_KEY in local_storage:
-        del local_storage[LS_KEY]
+    try:
+        del local_storage[LS_KEY]     # ✅ takto
+    except KeyError:
+        pass
     render()
+
+UNLOCKED = load_unlocked()
 
 
 document["btn_reset"].bind("click", reset_progress)
