@@ -181,7 +181,7 @@ def active_index(today: str) -> int:
 LS_KEY = "mqk_unlocked_v1"
 
 def load_unlocked():
-    raw = local_storage.getItem(LS_KEY)
+    raw = local_storage.get(LS_KEY)   # namiesto getItem
     if not raw:
         return set()
     try:
@@ -190,16 +190,19 @@ def load_unlocked():
     except Exception:
         return set()
 
+
 def save_unlocked(s: set):
-    local_storage.setItem(LS_KEY, ",".join(str(i) for i in sorted(list(s))))
+    local_storage[LS_KEY] = ",".join(str(i) for i in sorted(list(s)))
 
 UNLOCKED = load_unlocked()
 
 def reset_progress(ev=None):
     global UNLOCKED
     UNLOCKED = set()
-    local_storage.removeItem(LS_KEY)
+    if LS_KEY in local_storage:
+        del local_storage[LS_KEY]
     render()
+
 
 document["btn_reset"].bind("click", reset_progress)
 
